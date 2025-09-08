@@ -31,59 +31,52 @@ Der Server läuft auf: [http://127.0.0.1:5000/](http://127.0.0.1:5000/)
 
 ---
 
+
 ## API-Übersicht
 
 ### Topics
-| Methode | Endpoint           | Beschreibung                        |
-|---------|--------------------|-------------------------------------|
-| GET     | `/topics`          | Alle Topics abrufen                 |
-| GET     | `/topics/<id>`     | Einzelnes Topic per ID abrufen      |
-| POST    | `/topics`          | Neues Topic anlegen                 |
-| PUT     | `/topics/<id>`     | Topic per ID aktualisieren          |
-| DELETE  | `/topics/<id>`     | Topic per ID löschen                |
+| Methode | Endpoint           | Beschreibung                        | Parameter (Query/Body)                |
+|---------|--------------------|-------------------------------------|---------------------------------------|
+| GET     | `/topics`          | Alle Topics abrufen                 | `q`, `parentId`, `limit`, `offset`    |
+| GET     | `/topics/<id>`     | Einzelnes Topic per ID abrufen      |                                       |
+| POST    | `/topics`          | Neues Topic anlegen                 | `name` (str, Pflicht), `description`, `parentTopicID` |
+| PUT     | `/topics/<id>`     | Topic per ID aktualisieren          | `name`, `description`, `parentTopicID`|
+| DELETE  | `/topics/<id>`     | Topic per ID löschen                |                                       |
 
 ### Skills
-| Methode | Endpoint           | Beschreibung                        |
-|---------|--------------------|-------------------------------------|
-| GET     | `/skills`          | Alle Skills abrufen                 |
-| GET     | `/skills/<id>`     | Einzelnen Skill per ID abrufen      |
-| POST    | `/skills`          | Neuen Skill anlegen                 |
-| PUT     | `/skills/<id>`     | Skill per ID aktualisieren          |
-| DELETE  | `/skills/<id>`     | Skill per ID löschen                |
+| Methode | Endpoint           | Beschreibung                        | Parameter (Query/Body)                |
+|---------|--------------------|-------------------------------------|---------------------------------------|
+| GET     | `/skills`          | Alle Skills abrufen                 | `q`, `topicId`, `limit`, `offset`     |
+| GET     | `/skills/<id>`     | Einzelnen Skill per ID abrufen      |                                       |
+| POST    | `/skills`          | Neuen Skill anlegen                 | `name` (str, Pflicht), `topicID` (Pflicht), `difficulty` |
+| PUT     | `/skills/<id>`     | Skill per ID aktualisieren          | `name`, `topicID`, `difficulty`       |
+| DELETE  | `/skills/<id>`     | Skill per ID löschen                |                                       |
 
 ---
 
-## Datenstruktur
+## Datenmodell
 
-### topics.json
-```json
-[
-	{
-		"id": "<uuid>",
-		"name": "Thema-Name",
-		"description": "Beschreibung des Themas"
-	}
-]
-```
+Die Daten werden in einer PostgreSQL-Datenbank gespeichert. Die wichtigsten Felder:
 
-### skills.json
-```json
-[
-	{
-		"id": "<uuid>",
-		"name": "Skill-Name",
-		"topicId": "<topic-uuid>",
-		"difficulty": "leicht | mittel | schwer | unknown"
-	}
-]
-```
+**Topic:**
+- `id` (UUID, Primary Key)
+- `name` (str)
+- `description` (str)
+- `parent_topic_id` (UUID, optional)
+
+**Skill:**
+- `id` (UUID, Primary Key)
+- `name` (str)
+- `topic_id` (UUID, Foreign Key)
+- `difficulty` (str, z.B. "beginner", "mittel", "schwer")
 
 ---
 
 ## Fehlerbehandlung
 
 - Bei nicht gefundenen Ressourcen wird ein Fehlerobjekt mit passender Statusnummer zurückgegeben, z.B. `{ "error": "Topic not found" }` (Status 404).
-- Bei ungültigen Requests (fehlende Felder) wird ein Fehlerobjekt mit Status 400 zurückgegeben.
+- Bei ungültigen Requests (fehlende Felder, falsche UUID, etc.) wird ein Fehlerobjekt mit Status 422 zurückgegeben.
+- Bei Konflikten (z.B. Topic hat noch Skills) wird ein Fehlerobjekt mit Status 409 zurückgegeben.
 
 ---
 
@@ -100,12 +93,13 @@ curl -X POST http://127.0.0.1:5000/topics \
 ```bash
 curl -X POST http://127.0.0.1:5000/skills \
 	-H "Content-Type: application/json" \
-	-d '{"name": "Ableiten", "topicId": "<topic-uuid>", "difficulty": "mittel"}'
+	-d '{"name": "Ableiten", "topicID": "<topic-uuid>", "difficulty": "mittel"}'
 ```
 
 ---
 
 ## Hinweise
 
-- Die Daten werden in den Dateien `data/topics.json` und `data/skills.json` gespeichert.
+- Die Daten werden in einer PostgreSQL-Datenbank gespeichert (nicht mehr in JSON-Dateien).
 - Die API ist für Lernzwecke gedacht und speichert Daten nur lokal.
+- UUIDs werden als IDs verwendet (z.B. für `/topics/<id>`).
