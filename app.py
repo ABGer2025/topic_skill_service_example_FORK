@@ -51,7 +51,7 @@ def get_topic_by_id(id):
     topic = Topic.query.get(id)
     if not topic:
         return jsonify({"error": "Topic not found"}), 404
-    return jsonify(topic.to_dict())
+    return topic.to_dict()
 
 @app.route('/topics', methods=['POST'])
 def create_topic():
@@ -60,25 +60,23 @@ def create_topic():
     Erfordert 'name' und 'description' im JSON-Request-Body.
     Generiert eine eindeutige ID und speichert das Topic.
     """
-    new_topic_data = request.json
-    # Grundlegende Validierung der eingehenden Daten
-    if not new_topic_data or 'name' not in new_topic_data or 'description' not in new_topic_data:
-        return jsonify({"error": "Name und Beschreibung für das Topic sind erforderlich"}), 400
+    payload = request.get_json(silent=True) or {}
+    name = (payload.get('name') or "").strip()
+    description = payload.get('description')
+    parent_id = payload.get('parentTopicID')
 
-    # Generiere eine universell eindeutige ID (UUID) für das neue Topic
-    new_topic_id = str(uuid.uuid4())
+    if not name:
+        return jsonify({"error": "Field \"name\" is required"}), 422
 
-    topic = {
-        "id": new_topic_id,
-        "name": new_topic_data['name'],
-        "description": new_topic_data['description']
-    }
-
-    topics = data_manager.read_data(TOPICS_FILE)
-    topics.append(topic)
-    data_manager.write_data(TOPICS_FILE, topics)
-
-    return jsonify(topic), 201 # 201 Created Statuscode für erfolgreiche Ressourcenerstellung
+    if parent_id:
+        parent = Topic.query.get(parent_id)
+        if not parent:
+            return jsonify({"error": "Parent Topic ID not found"}), 422
+        
+    topic = Topic(name=name, description=description, parent_topic_id=parent_id)
+    db.session.add(topic)
+    db.session.commit()
+    return topic.to_dict(), 201
 
 @app.route('/topics/<id>', methods=['PUT'])
 def update_topic(id):
@@ -86,28 +84,25 @@ def update_topic(id):
     Aktualisiert ein bestehendes Lern-Topic anhand seiner ID.
     Erfordert 'name' und 'description' im JSON-Request-Body für die vollständige Aktualisierung.
     """
-    updated_data = request.json
-    if not updated_data or 'name' not in updated_data or 'description' not in updated_data:
-        return jsonify({"error": "Name und Beschreibung für das Topic sind erforderlich"}), 400
-
-    topics = data_manager.read_data(TOPICS_FILE)
-
-    found_index = -1
-    for i, t in enumerate(topics):
-        if t['id'] == id:
-            found_index = i
-            break
-
-    if found_index == -1:
+    topic = Topic.query.get(id)
+    if not topic:
         return jsonify({"error": "Topic not found"}), 404
+    
+    payload = request.get_json(silent=True) or {}
+    name = (payload.get('name') or topic.name).strip()
+    description = payload.get('description', topic.description)
+    parent_id = payload.get('parentTopicID', topic.parent_topic_id)
 
-    # Aktualisiere die Felder des gefundenen Topics
-    topics[found_index]['name'] = updated_data['name']
-    topics[found_index]['description'] = updated_data['description']
-
-    data_manager.write_data(TOPICS_FILE, topics)
-
-    return jsonify(topics[found_index]), 200 # 200 OK Statuscode für erfolgreiche Aktualisierung
+    if parent_id:
+        parent = Topic.query.get(parent_id)
+        if not parent:
+            return jsonify({"error": "Parent Topic ID not found"}), 422
+        
+    topic.name = name
+    topic.description = description
+    topic.parent_topic_id = parent_id
+    db.session.commit()
+    return topic.to_dict()
 
 @app.route('/topics/<id>', methods=['DELETE'])
 def delete_topic(id):
@@ -236,4 +231,4 @@ if __name__ == '__main__':
     # Startet den Flask-Entwicklungsserver.
     # debug=True ermöglicht automatische Neuladung bei Codeänderungen und detailliertere Fehlermeldungen.
     # port=5000 legt den Port fest, auf dem der Server läuft (http://127.0.0.1:5000/).
-    app.run(debug=True, port=5050)
+    app.run(debug=True, port=5000)
