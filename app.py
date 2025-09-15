@@ -82,25 +82,28 @@ def create_topic():
 def update_topic(id):
     """
     Aktualisiert ein bestehendes Lern-Topic anhand seiner ID.
-    Erfordert 'name' und 'description' im JSON-Request-Body für die vollständige Aktualisierung.
+    Erlaubt partielle Updates: nur Felder im JSON-Request-Body werden überschrieben.
     """
     topic = Topic.query.get(id)
+    
     if not topic:
-        return jsonify({"error": "Topic not found"}), 404
+        return jsonify({"error": "Topic with this ID does not exist"}), 404
     
     payload = request.get_json(silent=True) or {}
-    name = (payload.get('name') or topic.name).strip()
-    description = payload.get('description', topic.description)
-    parent_id = payload.get('parentTopicID', topic.parent_topic_id)
 
+    protected_fields = {"id", "created_at"}
+
+    for key, value in payload.items():
+        if hasattr(topic, key) and key not in protected_fields:
+            setattr(topic, key, value)
+
+    parent_id = payload.get("parent_topic_id")
     if parent_id:
         parent = Topic.query.get(parent_id)
         if not parent:
-            return jsonify({"error": "Parent Topic ID not found"}), 422
-        
-    topic.name = name
-    topic.description = description
-    topic.parent_topic_id = parent_id
+            return jsonify({"error": "parentTopicID not found"}), 422
+        topic.parent_topic_id = parent_id
+
     db.session.commit()
     return topic.to_dict()
 
