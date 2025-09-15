@@ -34,14 +34,28 @@ def healthz():
 
 # --- TOPIC ENDPUNKTE ---
 
-@app.route('/topics', methods=['GET'])
-def get_topics():
-    """
-    Ruft alle verfügbaren Lern-Topics ab.
-    """
-    rows = Topic.query.order_by(Topic.name.asc()).all()
-    data = [topic.to_dict() for topic in rows]
-    return jsonify(data)
+@app.get("/topics")
+def list_topics():
+    q = request.args.get("q")
+    parent_id = request.args.get("parentId")
+    try:
+        limit = min(int(request.args.get("limit", 50)), 200)
+        offset = max(int(request.args.get("offset", 0)), 0)
+    except:
+        return jsonify({"error": "limit/offset must be numbers"}), 422
+
+    query = Topic.query
+    if q:
+        query = query.filter(Topic.name.ilike(f"%{q}%"))
+    if parent_id:
+        query = query.filter(Topic.parent_topic_id == parent_id)
+
+    total = query.count()
+    items = query.order_by(Topic.name.asc()).limit(limit).offset(offset).all()
+    return {
+        "data": [t.to_dict() for t in items],
+        "meta": {"total": total, "limit": limit, "offset": offset}
+    }
 
 @app.route('/topics/<id>', methods=['GET'])
 def get_topic_by_id(id):
