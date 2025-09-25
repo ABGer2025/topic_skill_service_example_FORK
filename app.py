@@ -4,10 +4,12 @@ from flask_migrate import Migrate
 from dotenv import load_dotenv
 from models import db, Topic, Skill
 from sqlalchemy import exists
+from flask_cors import CORS
 
 load_dotenv()
 
 app = Flask(__name__)
+CORS(app)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv(
     "DATABASE_URL",
