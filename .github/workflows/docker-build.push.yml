@@ -33,3 +33,5 @@ jobs:
         push: true
         tags: |
           ${{ secrets.DOCKERHUB_USERNAME }}/topic-skill-service:latest
+          ${{ secrets.DOCKERHUB_USERNAME }}/topic-skill-service:${{ github.run_number }}
+          
