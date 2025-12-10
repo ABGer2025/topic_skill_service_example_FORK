@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 env:
-  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/topic-skill-service
+  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/topic-skill-service-example-FORK
 
 jobs:
   build-and-push:
@@ -46,7 +46,7 @@ jobs:
       GKE_CLUSTER: ${{ secrets.GKE_CLUSTER }}
       GKE_LOCATION: ${{ secrets.GKE_LOCATION }}
       K8S_NAMESPACE: ${{ secrets.K8S_NAMESPACE }}
-      IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/topic-skill-service:${{ github.run_number }}
+      IMAGE: ${{ env.IMAGE_NAME }}:${{ github.run_number }}
 
     steps:
       - name: Checkout repository
